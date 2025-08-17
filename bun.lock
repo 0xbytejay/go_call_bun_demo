@@ -1,0 +1,13 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "koffi": "^2.13.0",
+      },
+    },
+  },
+  "packages": {
+    "koffi": ["koffi@2.13.0", "", {}, "sha512-VqQzBC7XBVJHXA4DkmY68HbH8VTYVaBKq3MFlziI+pdJXIpd/lO4LeXKo2YpIhuTkLgXYra+dDjJOo2+yT1Tsg=="],
+  }
+}

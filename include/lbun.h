@@ -19,9 +19,9 @@ typedef struct {
   uintptr_t data;
   uintptr_t len;
   uintptr_t cap;
-} GoSlice;
+} GoSliceHeader;
 
-void startBunCli(GoSlice *argv);
+void startBunCli(GoSliceHeader *argv);
 
 VirtualMachine *VirtualMachine_getMainThreadVM(void);
 JSGlobalObject *VirtualMachine_getMainThreadVMGlobalObject(void);
@@ -32,9 +32,11 @@ JSValueResult JSValue_get(void *globalThis, JSValue jsValue, char *property);
 JSValueResult JSValue_fromInt64(void *globalThis, int64_t value);
 
 char *JSValue_call(void *globalThis, JSValue thisValue, JSValue func,
-                   GoSlice *property);
+                   GoSliceHeader *property);
 
 char *JSValue_toString(void *globalThis, JSValue jsValue);
+
+
 
 #ifdef __cplusplus
 }

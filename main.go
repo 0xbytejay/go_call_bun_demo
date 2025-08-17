@@ -1,41 +1,53 @@
 package main
 
 /*
-#cgo linux,amd64 CFLAGS: -fsanitize=address
-#cgo linux,amd64 LDFLAGS: -fsanitize=address -Wl,--strip-all -Wl,--strip-debug -Wl,--discard-all -fuse-ld=lld -no-pie -fsanitize=address
-
 //Include
 #cgo CFLAGS: -I${SRCDIR}/include
 
-//ZIG_LIBS
-#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/libs/linux/x86_64 -Wl,--whole-archive -lbun -Wl,--no-whole-archive
-
-//CPP_LIBS
-#cgo linux,amd64 LDFLAGS: -lzstd -lbrotlidec -lhwy -lssl -lbrotlicommon
-#cgo linux,amd64 LDFLAGS: -larchive -lcrypto -lbrotlienc -lz -lcares -ltcc -lls-hpack
-#cgo linux,amd64 LDFLAGS: -lsqlite3 -lhdr_histogram_static -ldeflate -ldecrepit -llolhtml
-
-//WEBKIT_LIBS
-#cgo linux,amd64 LDFLAGS: -lJavaScriptCore -lWTF -lbmalloc -licui18n -licuuc -licudata -licutu
-#cgo linux,amd64 LDFLAGS: -lstdc++ -latomic
-
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "lbun.h"
+
+typedef bool (*JSCallback)(int16_t);
+
+static bool callJSCallback(JSCallback cb,int16_t i) {
+    return cb(i);
+}
+
+
 */
 import "C"
 import (
+	"context"
 	"log"
+	"os"
 	"runtime"
 	"time"
 	"unsafe"
 )
 
+var jsCallback unsafe.Pointer
+
+var ctx, ready = context.WithCancel(context.Background())
+
+//export BeforeLoadEntryPoint
+func BeforeLoadEntryPoint(vm *C.VirtualMachine) {
+	log.Println("Bun: BeforeLoadEntryPoint")
+	//export func to js here
+}
+
+//export RegisterJSCallback
+func RegisterJSCallback(globalThis *C.JSGlobalObject, str *C.char, ptr unsafe.Pointer) C.JSValue {
+	defer ready()
+	log.Printf("Bun: RegisterJSCallback: %s", C.GoString(str))
+	jsCallback = ptr
+	return 0x7
+}
+
 func main() {
 
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	args := []string{"run", "/root/dev/go_bun_demo/index.js"}
+	args := os.Args[1:]
 
 	cArgs := make([]*C.char, len(args))
 	for i, s := range args {
@@ -47,29 +59,21 @@ func main() {
 	p.Pin(&cArgs[0])
 	defer p.Unpin()
 
-	go C.startBunCli((*C.GoSlice)(unsafe.Pointer(&cArgs)))
+	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		C.startBunCli((*C.GoSliceHeader)(unsafe.Pointer(&cArgs)))
+	}()
 
-	<-time.After(time.Millisecond * 5000)
-
-	var globalThis = C.VirtualMachine_getMainThreadVMGlobalObject()
-
-	var globalThisValue = C.JSGlobalObject_toJSValue(globalThis)
-
-	var testCustomValue = C.JSValue_get(globalThis, globalThisValue.value, C.CString("testCustomValue"))
-
-	var testCustomValueStrPtr = C.JSValue_toString(globalThis, testCustomValue.value)
-
-	defer C.free(unsafe.Pointer(testCustomValueStrPtr))
-
-	log.Printf("String Value From JS: %s", C.GoString(testCustomValueStrPtr))
-
-	// FIXME: Random Crash
-	// var testFuncValue = C.JSValue_get(globalThis, globalThisValue.value, C.CString("testFunc"))
-	// if testFuncValue.is_err {
-	// 	return
-	// }
-
-	// go C.JSValue_call(globalThis, globalThisValue.value, testFuncValue.value, nil)
+	<-ctx.Done()
+	go func() {
+		var goValue int16 = 0
+		for {
+			log.Printf("Result from js: %v ", bool(C.callJSCallback((C.JSCallback)(jsCallback), C.int16_t(goValue))))
+			goValue += 1
+			<-time.After(time.Second * 2)
+		}
+	}()
 
 	<-make(chan interface{})
 

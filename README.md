@@ -13,7 +13,7 @@ It shows how to:
 
 * **OS Kernel**:
   `Linux dev 6.12.38+deb13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.38-1 (2025-07-16) x86_64 GNU/Linux`
-* **Distribution**: Debian 13 (trixie) 
+* **Distribution**: Debian 13 (trixie)
 * **Go Version**:
   `go version go1.24.0 linux/amd64`
 * **Clang Version**:
@@ -38,7 +38,8 @@ export CGO_LDFLAGS_ALLOW=".*"
 ## Build the Demo
 
 ```bash
-go build -a -v -x -o main main.go
+go build -a -v -x -o main .
+./main run ./dist/index.js
 ```
 
 This will produce the executable `main`, which links against the Bun static library.
